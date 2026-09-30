@@ -10,69 +10,75 @@ import (
 
 	openrouter "github.com/OpenRouterTeam/go-sdk"
 	"github.com/OpenRouterTeam/go-sdk/models/components"
-	"github.com/joho/godotenv"
 	"github.com/yonesbeheshti/ai-gateway/entity"
 )
 
-type Adapter struct {
+type Provider struct {
 	client *openrouter.OpenRouter
 }
 
-func New() *Adapter {
+func New() *Provider {
 	// TODO: add to config
-	_ = godotenv.Load(".env")
+	//_ = godotenv.Load(".env")
+	fmt.Println(os.Getenv("OPENROUTER_API_KEY"))
 	client := openrouter.New(
 		openrouter.WithSecurity(os.Getenv("OPENROUTER_API_KEY")),
 	)
-	return &Adapter{client: client}
+	return &Provider{client: client}
 }
 
-func (a *Adapter) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.ChatResponse, error) {
+func (p *Provider) Client() *openrouter.OpenRouter {
+	return p.client
+}
+
+func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.ChatResponse, error) {
 
 	t1 := time.Now()
 
 	// TODO: user can send multiple messages
-	//messages := make([]components.ChatMessages, 0, len(req.Messages))
-	//for _, msg := range req.Messages {
-	//	messages = append(
-	//		messages,
-	//		components.CreateChatMessagesUser(
-	//			components.ChatUserMessage{
-	//				Role: components.ChatUserMessageRoleUser,
-	//				Content: components.CreateChatUserMessageContentStr(
-	//					msg.Content,
-	//				),
-	//			},
-	//		),
-	//	)
-	//}
-	//
-	//res, err := a.client.Chat.Send(ctx, components.ChatRequest{
-	//	Model:    openrouter.Pointer(req.Model),
-	//	Messages: messages,
-	//	Stream:   openrouter.Pointer(req.Stream),
-	//}, nil)
-
-	res, err := a.client.Chat.Send(ctx, components.ChatRequest{
-		Model: openrouter.Pointer("nvidia/nemotron-3-super-120b-a12b:free"),
-		Messages: []components.ChatMessages{
+	messages := make([]components.ChatMessages, 0, len(req.Messages))
+	for _, msg := range req.Messages {
+		messages = append(
+			messages,
 			components.CreateChatMessagesUser(
 				components.ChatUserMessage{
 					Role: components.ChatUserMessageRoleUser,
-					//Role: "user",
 					Content: components.CreateChatUserMessageContentStr(
-						"what is the most dangerous animal on the Earth",
+						msg.Content,
 					),
 				},
 			),
-		},
-		Stream: openrouter.Pointer(true),
+		)
+	}
+
+	res, err := p.client.Chat.Send(ctx, components.ChatRequest{
+		Model:    openrouter.Pointer("nvidia/nemotron-3-super-120b-a12b:free"),
+		Messages: messages,
+		Stream:   openrouter.Pointer(true),
 	}, nil)
+
+	//fmt.Println(req)
+	//// TODO: add to config
+	//res, err := p.client.Chat.Send(ctx, components.ChatRequest{
+	//	Model: openrouter.Pointer("nvidia/nemotron-3-super-120b-a12b:free"),
+	//	Messages: []components.ChatMessages{
+	//		components.CreateChatMessagesUser(
+	//			components.ChatUserMessage{
+	//				Role: components.ChatUserMessageRoleUser,
+	//				//Role: "user",
+	//				Content: components.CreateChatUserMessageContentStr(
+	//					"what is the most dangerous animal on the Earth",
+	//				),
+	//			},
+	//		),
+	//	},
+	//	Stream: openrouter.Pointer(true),
+	//}, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	if res == nil || res.EventStream == nil {
-		log.Fatal("expected streaming response")
+		log.Println("expected streaming response")
 	}
 
 	stream := res.EventStream
@@ -94,9 +100,10 @@ func (a *Adapter) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.Ch
 	fmt.Println()
 
 	if err := stream.Err(); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
+	fmt.Println(sb.String())
 	fmt.Println("time to response:", time.Since(t1))
 	return &entity.ChatResponse{
 		Content: sb.String(),

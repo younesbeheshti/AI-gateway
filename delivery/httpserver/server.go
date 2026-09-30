@@ -5,31 +5,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/yonesbeheshti/ai-gateway/service/aiservice"
 )
 
-type Server struct {
+type Config struct {
 	Addr string
 	Port int
 }
 
-func New(addr string, port int) *Server {
+type Server struct {
+	cfg   Config
+	aiSvc aiservice.Service
+}
+
+func New(cfg Config, aiSvc aiservice.Service) *Server {
 	return &Server{
-		Addr: addr,
-		Port: port,
+		cfg:   cfg,
+		aiSvc: aiSvc,
 	}
 }
 
-func (s *Server) Serve(ctx context.Context) error {
+func (s *Server) Serve(_ context.Context) error {
 	handler := http.NewServeMux()
 
 	handler.HandleFunc("/health_check", s.healthCheck)
+	handler.HandleFunc("/api/chat", s.chatHandler)
 
-	fmt.Println("server is running on", s.Addr, s.Port)
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", s.Addr, s.Port), handler)
+	fmt.Println("server is running on", s.cfg.Addr, s.cfg.Port)
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", s.cfg.Addr, s.cfg.Port), handler)
 
 }
 
-func WriteJson(w http.ResponseWriter, data map[string]any, status int) {
+func WriteJson(w http.ResponseWriter, data any, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	body, err := json.Marshal(data)
 	if err != nil {
