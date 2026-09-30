@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 
@@ -16,14 +15,11 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		WriteJson(w, map[string]any{"error": err.Error()}, http.StatusBadRequest)
-		return
-	}
+	defer r.Body.Close()
+	r.Body = http.MaxBytesReader(w, r.Body, 2<<20) // 2MB limit
 	var req param.ChatRequest
-	if err := json.Unmarshal(data, &req); err != nil {
-		WriteJson(w, map[string]any{"error": err.Error()}, http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteJson(w, map[string]any{"error": "invalid request body"}, http.StatusBadRequest)
 		return
 	}
 

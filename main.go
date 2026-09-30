@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	"github.com/yonesbeheshti/ai-gateway/delivery/httpserver"
@@ -22,6 +25,7 @@ func main() {
 		Port: 8080,
 	}
 
+	// TODO: save them with the model name -> gemma2:2b: ollamaP
 	ollamaP := ollama.New()
 	openrouterP := openrouter.New()
 	providers := map[string]aiservice.Provider{
@@ -31,9 +35,12 @@ func main() {
 
 	aiSvc := aiservice.New(ollamaP, providers)
 	server := httpserver.New(cfg, aiSvc)
-	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 	if err := server.Serve(ctx); err != nil {
 		panic(err)
 	}
+
+
 
 }
