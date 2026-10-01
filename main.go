@@ -8,9 +8,11 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
+	redisadapter "github.com/yonesbeheshti/ai-gateway/adapter/redis"
 	"github.com/yonesbeheshti/ai-gateway/delivery/httpserver"
 	"github.com/yonesbeheshti/ai-gateway/provider/ollama"
 	"github.com/yonesbeheshti/ai-gateway/provider/openrouter"
+	"github.com/yonesbeheshti/ai-gateway/repository/redis"
 	"github.com/yonesbeheshti/ai-gateway/service/aiservice"
 )
 
@@ -25,6 +27,9 @@ func main() {
 		Port: 8080,
 	}
 
+	redisAdapter := redisadapter.New()
+	cacheWithRedis := redis.New(redisAdapter)
+
 	// TODO: save them with the model name -> gemma2:2b: ollamaP
 	ollamaP := ollama.New()
 	openrouterP := openrouter.New()
@@ -33,7 +38,7 @@ func main() {
 		"openrouter": openrouterP,
 	}
 
-	aiSvc := aiservice.New(ollamaP, providers)
+	aiSvc := aiservice.New(ollamaP, providers, cacheWithRedis)
 	server := httpserver.New(cfg, aiSvc)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

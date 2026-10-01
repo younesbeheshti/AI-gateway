@@ -42,7 +42,7 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	// TODO: add get handler to list all the model for the user
 	handler.HandleFunc("/health_check", s.healthCheck)
-	handler.HandleFunc("/v1/chat/completions", s.chatHandler)
+	handler.HandleFunc("/api/chat/completions", s.chatHandler)
 
 	serverErr := make(chan error, 1)
 	go func() {
@@ -62,14 +62,11 @@ func (s *Server) Serve(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown gracefully: %w", err)
 	}
 	log.Println("Server exited cleanly")
 	return nil
-}
-
 }
 
 func WriteJson(w http.ResponseWriter, data any, status int) {
