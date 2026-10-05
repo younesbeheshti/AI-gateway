@@ -6,8 +6,9 @@ type Message struct {
 }
 
 type ChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
+	Model     string    `json:"model"`
+	Messages  []Message `json:"messages"`
+	WithCache bool      `json:"with_cache"`
 }
 type ChatResponse struct {
 	Content string `json:"message"`

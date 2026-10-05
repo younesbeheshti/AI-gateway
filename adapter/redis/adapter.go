@@ -1,27 +1,29 @@
 package redisadapter
 
-import "github.com/redis/go-redis/v9"
+import (
+	"fmt"
+
+	"github.com/redis/go-redis/v9"
+)
 
 type Config struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
+	Host     string `koanf:"host"`
+	Port     int    `koanf:"port"`
+	Password string `koanf:"password"`
+	DB       int    `koanf:"db"`
 }
 
 type RedisAdapter struct {
 	client *redis.Client
 }
 
-func New() *RedisAdapter {
+func New(cfg Config) *RedisAdapter {
 
-	//TODO: add to config
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Password: cfg.Password,
+		DB:       cfg.DB,
 	})
-
 	return &RedisAdapter{client: client}
 }
 

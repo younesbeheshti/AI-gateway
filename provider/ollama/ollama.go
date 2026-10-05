@@ -51,7 +51,7 @@ func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.C
 
 	err := p.client.Chat(ctx, chReq, respFunc)
 	if err != nil {
-		log.Println("Unable to send message: %s", err.Error())
+		log.Printf("Unable to send message: %s\n", err.Error())
 		return nil, err
 	}
 
@@ -59,16 +59,3 @@ func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.C
 		Content: sb.String(),
 	}, nil
 }
-
-//func main() {
-//	client := New()
-//	resp, _ := client.Chat(context.Background(), &entity.ChatRequest{
-//		Model: "gemma2:2b",
-//		Messages: []entity.Message{
-//			{Role: "user", Content: "print all the first ten prime numbers"},
-//		},
-//		Stream: false,
-//	})
-//
-//	fmt.Println(resp.Content)
-//}

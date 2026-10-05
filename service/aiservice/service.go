@@ -19,18 +19,25 @@ type Provider interface {
 	Chat(ctx context.Context, req *entity.ChatRequest) (*entity.ChatResponse, error)
 }
 
+type Config struct {
+	CacheTtl time.Duration `koanf:"cache_ttl"`
+}
+
 type Service struct {
 	providers       map[string]Provider
 	defaultProvider Provider
 	cache           Cache
+	cfg             Config
 }
 
-func New(defaultProvider Provider, providers map[string]Provider, cache Cache) Service {
+func New(cfg Config, defaultProvider Provider, providers map[string]Provider, cache Cache) Service {
 	return Service{
 		providers:       providers,
 		defaultProvider: defaultProvider,
 		cache:           cache,
+		cfg:             cfg,
 	}
+
 }
 
 func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) (*param.ChatResponse, error) {
@@ -53,7 +60,7 @@ func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) 
 
 	// check redis to see if the user request or similar to it exist
 	var cacheKey string
-	if s.cache != nil {
+	if s.cache != nil && req.WithCache {
 		if key, err := cache.GenerateCacheKey(userReq); err == nil {
 			cacheKey = key
 			if cachedResp, hit, err := s.cache.Get(ctx, cacheKey); err == nil && hit {
@@ -70,9 +77,8 @@ func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) 
 		return nil, err
 	}
 
-	//TODO: add to config
 	if s.cache != nil && cacheKey != "" {
-		if err := s.cache.Set(ctx, cacheKey, resp, 1*time.Hour); err != nil {
+		if err := s.cache.Set(ctx, cacheKey, resp, s.cfg.CacheTtl); err != nil {
 			log.Printf("Warning: failed to save to cache: %v\n", err)
 		}
 		log.Println("Cached:", cacheKey)

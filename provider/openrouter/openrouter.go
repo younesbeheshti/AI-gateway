@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -13,16 +12,23 @@ import (
 	"github.com/yonesbeheshti/ai-gateway/entity"
 )
 
+type Config struct {
+	APIKey string `koanf:"api_key"`
+}
+
 type Provider struct {
 	client *openrouter.OpenRouter
 }
 
-func New() *Provider {
+func New(cfg Config) *Provider {
 	// TODO: add to config
 	//_ = godotenv.Load(".env")
-	fmt.Println(os.Getenv("OPENROUTER_API_KEY"))
+	//client := openrouter.New(
+	//	openrouter.WithSecurity(os.Getenv("OPENROUTER_API_KEY")),
+	//)
+
 	client := openrouter.New(
-		openrouter.WithSecurity(os.Getenv("OPENROUTER_API_KEY")),
+		openrouter.WithSecurity(cfg.APIKey),
 	)
 	return &Provider{client: client}
 }

@@ -13,8 +13,8 @@ import (
 )
 
 type Config struct {
-	Addr string
-	Port int
+	Addr string `koanf:"address"`
+	Port int    `koanf:"port"`
 }
 
 type Server struct {

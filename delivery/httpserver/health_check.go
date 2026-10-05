@@ -13,6 +13,8 @@ func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
+
 	WriteJson(w,
 		map[string]any{
 			"status": "ok",
