@@ -2,6 +2,7 @@ package aiservice
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -72,9 +73,18 @@ func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) 
 
 	// if not, send the request to the selected provider
 	// if the selected provider did not respond, try two more times and then change the provider or select default provider
-	resp, err := provider.Chat(ctx, userReq)
+	// 1. Try selected provider
+	resp, err := s.chatWithRetry(ctx, provider, userReq, 2)
+
+	// 2. Fall back to default provider only if different and primary failed
+	if err != nil && provider != s.defaultProvider && s.defaultProvider != nil {
+		log.Printf("Primary provider failed (%v). Falling back to default provider...", err)
+		resp, err = s.chatWithRetry(ctx, s.defaultProvider, userReq, 1)
+	}
+
+	// 3. Check error before accessing resp
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate response: %w", err)
 	}
 
 	if s.cache != nil && cacheKey != "" {
@@ -94,4 +104,34 @@ func (s *Service) resolveProvider(model string) Provider {
 		return s.providers[model]
 	}
 	return s.defaultProvider
+}
+
+func (s *Service) chatWithRetry(ctx context.Context, p Provider, req *entity.ChatRequest, maxRetries int) (*entity.ChatResponse, error) {
+	var resp *entity.ChatResponse
+	var err error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Stop if client canceled or timed out
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		resp, err = p.Chat(ctx, req)
+		if err == nil && resp != nil {
+			return resp, nil
+		}
+
+		log.Printf("Provider attempt %d failed: %v", attempt+1, err)
+
+		// Wait briefly before retrying (exponential backoff)
+		if attempt < maxRetries {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(time.Duration(100*(1<<attempt)) * time.Millisecond):
+			}
+		}
+	}
+
+	return nil, err
 }
