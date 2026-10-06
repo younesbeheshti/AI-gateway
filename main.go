@@ -12,10 +12,12 @@ import (
 	redisadapter "github.com/yonesbeheshti/ai-gateway/adapter/redis"
 	"github.com/yonesbeheshti/ai-gateway/config"
 	"github.com/yonesbeheshti/ai-gateway/delivery/httpserver"
+	"github.com/yonesbeheshti/ai-gateway/pkg/ratelimiter"
 	"github.com/yonesbeheshti/ai-gateway/provider/ollama"
 	"github.com/yonesbeheshti/ai-gateway/provider/openrouter"
 	"github.com/yonesbeheshti/ai-gateway/repository/redis"
 	"github.com/yonesbeheshti/ai-gateway/service/aiservice"
+	"github.com/yonesbeheshti/ai-gateway/service/userservice"
 )
 
 func main() {
@@ -41,8 +43,13 @@ func main() {
 		"openrouter": openrouterP,
 	}
 
+	rateLimiter := ratelimiter.New(cfg.RateLimiter)
+	//userSvc := userservice.New()
+	userSvc := &userservice.Service{}
 	aiSvc := aiservice.New(cfg.AiSvc, ollamaP, providers, cacheWithRedis)
-	server := httpserver.New(cfg.Httpserver, aiSvc)
+	server := httpserver.New(cfg.Httpserver, aiSvc, userSvc, rateLimiter)
+
+	
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if err := server.Serve(ctx); err != nil {

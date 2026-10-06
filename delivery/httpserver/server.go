@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/yonesbeheshti/ai-gateway/pkg/ratelimiter"
 	"github.com/yonesbeheshti/ai-gateway/service/aiservice"
+	"github.com/yonesbeheshti/ai-gateway/service/userservice"
 )
 
 type Config struct {
@@ -18,14 +20,18 @@ type Config struct {
 }
 
 type Server struct {
-	cfg   Config
-	aiSvc aiservice.Service
+	cfg         Config
+	aiSvc       *aiservice.Service
+	userSvc     *userservice.Service
+	rateLimiter *ratelimiter.RateLimiter
 }
 
-func New(cfg Config, aiSvc aiservice.Service) *Server {
+func New(cfg Config, aiSvc *aiservice.Service, userSvc *userservice.Service, rateLimiter *ratelimiter.RateLimiter) *Server {
 	return &Server{
-		cfg:   cfg,
-		aiSvc: aiSvc,
+		cfg:         cfg,
+		aiSvc:       aiSvc,
+		userSvc:     userSvc,
+		rateLimiter: rateLimiter,
 	}
 }
 
@@ -36,13 +42,14 @@ func (s *Server) Serve(ctx context.Context) error {
 		Addr:         fmt.Sprintf("%s:%d", s.cfg.Addr, s.cfg.Port),
 		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 60 * time.Second, // Allow enough time for LLM response
+		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
 
 	// TODO: add get handler to list all the model for the user
 	handler.HandleFunc("/health_check", s.healthCheck)
-	handler.HandleFunc("/api/chat/completions", s.chatHandler)
+	handler.Handle("/api/chat/completions", s.rateLimitMiddleware(http.HandlerFunc(s.chatHandler)))
+	handler.HandleFunc("/api/login", s.loginHandler)
 
 	serverErr := make(chan error, 1)
 	go func() {
