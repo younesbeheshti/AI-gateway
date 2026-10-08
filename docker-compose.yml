@@ -1,28 +1,28 @@
 services:
-##  postgres:
-##    image: postgres:16-alpine
-##    container_name: gocast-game-postgres
-##    restart: unless-stopped
-##
-##    environment:
-##      POSTGRES_USER: postgres
-##      POSTGRES_PASSWORD: postgres
-##      POSTGRES_DB: gocast_game
-##
-##    ports:
-##      - "5432:5432"
-##
-##    volumes:
-##      - postgres_data:/var/lib/postgresql/data
-##
-##    networks:
-##      - game_app
-#
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U postgres -d taskbridge"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-gateway-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_gateway
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - ai_gateway
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai-gataway-postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 
   redis:
@@ -42,7 +42,7 @@ services:
 
 
 volumes:
-#  postgres_data:
+  postgres_data:
   redis_data:
 
 networks:

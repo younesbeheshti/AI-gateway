@@ -15,6 +15,7 @@ import (
 	"github.com/yonesbeheshti/ai-gateway/pkg/ratelimiter"
 	"github.com/yonesbeheshti/ai-gateway/provider/ollama"
 	"github.com/yonesbeheshti/ai-gateway/provider/openrouter"
+	"github.com/yonesbeheshti/ai-gateway/repository/postgres"
 	"github.com/yonesbeheshti/ai-gateway/repository/redis"
 	"github.com/yonesbeheshti/ai-gateway/service/aiservice"
 	"github.com/yonesbeheshti/ai-gateway/service/userservice"
@@ -45,7 +46,9 @@ func main() {
 
 	rateLimiter := ratelimiter.New(cfg.RateLimiter)
 	//userSvc := userservice.New()
-	userSvc := &userservice.Service{}
+
+	psqlRepo := postgres.New(cfg.DBConfig)
+	userSvc := userservice.New(psqlRepo)
 	aiSvc := aiservice.New(cfg.AiSvc, ollamaP, providers, cacheWithRedis)
 	server := httpserver.New(cfg.Httpserver, aiSvc, userSvc, rateLimiter)
 

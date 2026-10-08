@@ -31,8 +31,8 @@ type Service struct {
 	cfg             Config
 }
 
-func New(cfg Config, defaultProvider Provider, providers map[string]Provider, cache Cache) Service {
-	return Service{
+func New(cfg Config, defaultProvider Provider, providers map[string]Provider, cache Cache) *Service {
+	return &Service{
 		providers:       providers,
 		defaultProvider: defaultProvider,
 		cache:           cache,
@@ -61,7 +61,7 @@ func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) 
 
 	// check redis to see if the user request or similar to it exist
 	var cacheKey string
-	if s.cache != nil && req.WithCache {
+	if s.cache != nil && req.NoCache {
 		if key, err := cache.GenerateCacheKey(userReq); err == nil {
 			cacheKey = key
 			if cachedResp, hit, err := s.cache.Get(ctx, cacheKey); err == nil && hit {

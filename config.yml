@@ -7,10 +7,10 @@ httpserver:
   address: ""
   port: 8080
 
-postgres:
+dbconfig:
   port: 5432
   host: localhost
-  db_name: postgres
+  db_name: ai_gateway
   username: postgres
   password: postgres
   sslmode: disable
