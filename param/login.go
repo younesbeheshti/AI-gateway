@@ -6,5 +6,6 @@ type LoginRequest struct {
 
 // TODO: add user usage field
 type LoginResponse struct {
-	Token string `json:"your_token"`
+	ApiKey string `json:"api_key"`
+	Token  int64  `json:"token"`
 }

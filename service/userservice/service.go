@@ -2,6 +2,8 @@ package userservice
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 
@@ -12,6 +14,7 @@ import (
 type Repository interface {
 	AddUser(ctx context.Context, user *entity.User) (*entity.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetUserByApiKey(ctx context.Context, apiKey string) (*entity.User, error)
 }
 
 type Service struct {
@@ -36,15 +39,22 @@ func (s *Service) Login(ctx context.Context, req *param.LoginRequest) (*param.Lo
 		return nil, err
 	} else if user != nil {
 		return &param.LoginResponse{
-			Token: "oh, you think you have any token! :|",
+			ApiKey: user.ApiKey,
+			Token:  user.TokenBalance,
 		}, nil
 	}
 
 	// generate token for that email
-
+	apikey, err := GenerateApiKey()
+	if err != nil {
+		log.Println("err:", err.Error())
+		return nil, err
+	}
 	// save the user in database
 	user = &entity.User{
-		Email: req.Email,
+		Email:        req.Email,
+		ApiKey:       apikey,
+		TokenBalance: 100_000,
 	}
 	user, err = s.repo.AddUser(ctx, user)
 	if err != nil {
@@ -55,6 +65,15 @@ func (s *Service) Login(ctx context.Context, req *param.LoginRequest) (*param.Lo
 	// send the token to user
 
 	return &param.LoginResponse{
-		Token: "did you order any token? :)",
+		ApiKey: user.ApiKey,
+		Token:  user.TokenBalance,
 	}, nil
+}
+
+func GenerateApiKey() (string, error) {
+	bytes := make([]byte, 24) // 24 bytes = 48 hex characters
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+	return "sk-gw-" + hex.EncodeToString(bytes), nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/yonesbeheshti/ai-gateway/pkg/ratelimiter"
 	"github.com/yonesbeheshti/ai-gateway/provider/ollama"
 	"github.com/yonesbeheshti/ai-gateway/provider/openrouter"
+	"github.com/yonesbeheshti/ai-gateway/repository/migrator"
 	"github.com/yonesbeheshti/ai-gateway/repository/postgres"
 	"github.com/yonesbeheshti/ai-gateway/repository/redis"
 	"github.com/yonesbeheshti/ai-gateway/service/aiservice"
@@ -32,6 +33,9 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("config: %+v\n", cfg)
+
+	mgr := migrator.New(cfg.DBConfig)
+	mgr.Up()
 
 	redisAdapter := redisadapter.New(cfg.Redis)
 	cacheWithRedis := redis.New(redisAdapter)

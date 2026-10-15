@@ -1,7 +1,9 @@
 package redisadapter
 
 import (
+	"context"
 	"fmt"
+	"log"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -24,6 +26,14 @@ func New(cfg Config) *RedisAdapter {
 		Password: cfg.Password,
 		DB:       cfg.DB,
 	})
+
+	ctx := context.Background()
+	_, err := client.Ping(ctx).Result()
+	if err != nil {
+		log.Printf("redis ping failed: %v", err)
+		panic(err)
+	}
+
 	return &RedisAdapter{client: client}
 }
 

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -49,8 +50,7 @@ func (p *PostgresDB) Conn() *sql.DB {
 
 func (p *PostgresDB) AddUser(ctx context.Context, user *entity.User) (*entity.User, error) {
 	const op = "AddUser"
-
-	err := p.db.QueryRowContext(ctx, "INSERT INTO users(email) values($1) returning id;", user.Email).Scan(&user.ID)
+	err := p.db.QueryRowContext(ctx, "INSERT INTO users(email, api_key, token_balance) values($1, $2, $3) returning id;", user.Email, user.ApiKey, user.TokenBalance).Scan(&user.ID)
 	if err != nil {
 		log.Printf("%v: failed to insert user into database, err %v\n", op, err)
 		return nil, err
@@ -65,7 +65,7 @@ func (p *PostgresDB) GetUserByEmail(ctx context.Context, email string) (*entity.
 	const op = "GetUserByEmail"
 	var user entity.User
 
-	err := p.db.QueryRowContext(ctx, "SELECT * FROM users WHERE email=$1", email).Scan(&user.ID, &user.Email, &user.CreatedAt)
+	err := p.db.QueryRowContext(ctx, "SELECT * FROM users WHERE email=$1", email).Scan(&user.ID, &user.Email, &user.ApiKey, &user.TokenBalance, &user.CreatedAt)
 	if err != nil {
 
 		if err == sql.ErrNoRows {
@@ -76,5 +76,22 @@ func (p *PostgresDB) GetUserByEmail(ctx context.Context, email string) (*entity.
 		return nil, err
 	}
 
+	return &user, nil
+}
+
+func (p *PostgresDB) GetUserByApiKey(ctx context.Context, apiKey string) (*entity.User, error) {
+
+	const op = "GetUserByApiKey"
+	var user entity.User
+	err := p.db.QueryRowContext(ctx,
+		"SELECT id, email, api_key, token_balance, created_at FROM users WHERE api_key=$1",
+		apiKey,
+	).Scan(&user.ID, &user.Email, &user.ApiKey, &user.TokenBalance, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
 	return &user, nil
 }
