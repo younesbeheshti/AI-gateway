@@ -70,6 +70,17 @@ func (s *Service) Login(ctx context.Context, req *param.LoginRequest) (*param.Lo
 	}, nil
 }
 
+func (s *Service) GetUserByApiKey(ctx context.Context, apiKey string) (*entity.User, error) {
+	user, err := s.repo.GetUserByApiKey(ctx, apiKey)
+	if err != nil {
+		log.Println("err", err.Error())
+		return nil, err
+	}
+
+	return user, nil
+}
+
+
 func GenerateApiKey() (string, error) {
 	bytes := make([]byte, 24) // 24 bytes = 48 hex characters
 	if _, err := rand.Read(bytes); err != nil {

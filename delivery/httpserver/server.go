@@ -48,7 +48,7 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	// TODO: add get handler to list all the model for the user
 	handler.HandleFunc("/health_check", s.healthCheck)
-	handler.Handle("/api/chat/completions", s.rateLimitMiddleware(http.HandlerFunc(s.chatHandler)))
+	handler.Handle("/api/chat/completions", s.authMiddleware(s.rateLimitMiddleware(http.HandlerFunc(s.chatHandler))))
 	handler.HandleFunc("/api/login", s.loginHandler)
 
 	serverErr := make(chan error, 1)

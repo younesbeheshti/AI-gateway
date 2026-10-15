@@ -16,7 +16,7 @@ type RateLimit struct {
 }
 type RateLimiter struct {
 	mu      sync.Mutex
-	clients map[int64]*RateLimit
+	clients map[uint64]*RateLimit
 
 	limit  int
 	window time.Duration
@@ -24,13 +24,13 @@ type RateLimiter struct {
 
 func New(cfg Config) *RateLimiter {
 	return &RateLimiter{
-		clients: make(map[int64]*RateLimit),
+		clients: make(map[uint64]*RateLimit),
 		limit:   cfg.Limit,
 		window:  cfg.Window,
 	}
 }
 
-func (r *RateLimiter) Allow(userId int64) bool {
+func (r *RateLimiter) Allow(userId uint64) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
