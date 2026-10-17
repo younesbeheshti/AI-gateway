@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/yonesbeheshti/ai-gateway/entity"
+	"github.com/yonesbeheshti/ai-gateway/param"
 )
 
 type contextKey string
@@ -15,6 +15,7 @@ const userContextKey contextKey = "authenticated_user"
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			WriteJson(w, map[string]string{"error": "missing Authorization header"}, http.StatusUnauthorized)
@@ -34,16 +35,16 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Optional: check simulated token balance
-		//if user.TokenBalance <= 0 {
-		//	WriteJson(w, map[string]string{"error": "insufficient token balance"}, http.StatusPaymentRequired)
-		//	return
-		//}
+		//Optional: check simulated token balance
+		if user.Tokens <= 0 {
+			WriteJson(w, map[string]string{"error": "insufficient token balance"}, http.StatusPaymentRequired)
+			return
+		}
 
 		log.Println("authenticated user:", user)
 
 		// Pass user into context for handlers
-		ctx := context.WithValue(r.Context(), userContextKey, user)
+		ctx := context.WithValue(r.Context(), "authenticated_user", user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -51,7 +52,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		user := r.Context().Value(userContextKey).(*entity.User)
+		user := r.Context().Value("authenticated_user").(*param.User)
 
 		if !s.rateLimiter.Allow(user.ID) {
 			WriteJson(w, map[string]any{"error": "rate limit exceeded"}, http.StatusTooManyRequests)

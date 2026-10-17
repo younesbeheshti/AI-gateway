@@ -13,4 +13,12 @@ type Message struct {
 
 type ChatResponse struct {
 	Content string
+	Usage Usage
+}
+
+
+type Usage struct {
+	PromptTokens     int64
+	CompletionTokens int64
+	TotalTokens      int64
 }

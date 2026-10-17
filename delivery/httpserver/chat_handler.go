@@ -3,7 +3,7 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -13,6 +13,12 @@ import (
 func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteJson(w, map[string]any{"error": "method not allowed"}, http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, ok := r.Context().Value("authenticated_user").(*param.User)
+	if user == nil || !ok {
+		WriteJson(w, map[string]any{"error": "not authorized"}, http.StatusUnauthorized)
 		return
 	}
 
@@ -26,13 +32,18 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("req:", req)
-
 	resp, err := s.aiSvc.GenerateResponse(ctx, &req)
 	if err != nil {
 		WriteJson(w, map[string]any{"error": err.Error()}, http.StatusInternalServerError)
 		return
 	}
+
+	remaining, err := s.userSvc.DeductTokens(ctx, user.ID, resp.Usage)
+	if err != nil {
+		WriteJson(w, map[string]any{"error": err.Error()}, http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("remaining:", remaining)
 
 	WriteJson(w, resp, http.StatusOK)
 

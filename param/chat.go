@@ -11,5 +11,7 @@ type ChatRequest struct {
 	NoCache  bool      `json:"no_cache"`
 }
 type ChatResponse struct {
-	Content string `json:"message"`
+	Content        string `json:"message"`
+	Usage          int64  `json:"usage"`
+	RemainingToken int64  `json:"remaining-token"`
 }

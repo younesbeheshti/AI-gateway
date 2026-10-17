@@ -75,8 +75,8 @@ func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) 
 	// if the selected provider did not respond, try two more times and then change the provider or select default provider
 	// 1. Try selected provider
 	resp, err := s.chatWithRetry(ctx, provider, userReq, 2)
-
 	// 2. Fall back to default provider only if different and primary failed
+
 	if err != nil && provider != s.defaultProvider && s.defaultProvider != nil {
 		log.Printf("Primary provider failed (%v). Falling back to default provider...", err)
 		resp, err = s.chatWithRetry(ctx, s.defaultProvider, userReq, 1)
@@ -95,6 +95,7 @@ func (s *Service) GenerateResponse(ctx context.Context, req *param.ChatRequest) 
 	}
 	return &param.ChatResponse{
 		Content: resp.Content,
+		Usage:   resp.Usage.TotalTokens,
 	}, nil
 }
 

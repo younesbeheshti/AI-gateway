@@ -95,3 +95,18 @@ func (p *PostgresDB) GetUserByApiKey(ctx context.Context, apiKey string) (*entit
 	}
 	return &user, nil
 }
+
+func (p *PostgresDB) DeductUserTokens(ctx context.Context, userID uint64, tokens int64) (int64, error) {
+	const query = `
+		UPDATE users
+		SET token_balance = GREATEST(0, token_balance - $1)
+		WHERE id = $2
+		RETURNING token_balance;
+	`
+	var remainingBalance int64
+	err := p.db.QueryRowContext(ctx, query, tokens, userID).Scan(&remainingBalance)
+	if err != nil {
+		return 0, fmt.Errorf("failed to deduct tokens: %w", err)
+	}
+	return remainingBalance, nil
+}

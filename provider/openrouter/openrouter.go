@@ -2,14 +2,15 @@ package openrouter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	openrouter "github.com/OpenRouterTeam/go-sdk"
 	"github.com/OpenRouterTeam/go-sdk/models/components"
 	"github.com/yonesbeheshti/ai-gateway/entity"
+	"github.com/yonesbeheshti/ai-gateway/pkg/estimatetoken"
 )
 
 type Config struct {
@@ -39,8 +40,6 @@ func (p *Provider) Client() *openrouter.OpenRouter {
 
 func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.ChatResponse, error) {
 
-	t1 := time.Now()
-
 	// TODO: user can send multiple messages
 	messages := make([]components.ChatMessages, 0, len(req.Messages))
 	for _, msg := range req.Messages {
@@ -63,34 +62,19 @@ func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.C
 		Stream:   openrouter.Pointer(true),
 	}, nil)
 
-	//fmt.Println(req)
-	//// TODO: add to config
-	//res, err := p.client.Chat.Send(ctx, components.ChatRequest{
-	//	Model: openrouter.Pointer("nvidia/nemotron-3-super-120b-a12b:free"),
-	//	Messages: []components.ChatMessages{
-	//		components.CreateChatMessagesUser(
-	//			components.ChatUserMessage{
-	//				Role: components.ChatUserMessageRoleUser,
-	//				//Role: "user",
-	//				Content: components.CreateChatUserMessageContentStr(
-	//					"what is the most dangerous animal on the Earth",
-	//				),
-	//			},
-	//		),
-	//	},
-	//	Stream: openrouter.Pointer(true),
-	//}, nil)
 	if err != nil {
 		log.Println(err)
 	}
 	if res == nil || res.EventStream == nil {
 		log.Println("expected streaming response")
+		return nil, errors.New("expected streaming response")
 	}
 
 	stream := res.EventStream
 	defer stream.Close()
 
 	var sb strings.Builder
+	var promptTokens, completionTokens int64 = 0, 0
 
 	for stream.Next() {
 		chunk := stream.Value()
@@ -103,16 +87,26 @@ func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.C
 			}
 		}
 	}
-	fmt.Println()
 
 	if err := stream.Err(); err != nil {
 		log.Println(err)
 	}
 
-	fmt.Println(sb.String())
-	fmt.Println("time to response:", time.Since(t1))
+	for _, m := range req.Messages {
+		promptTokens += estimatetoken.EstimateTokens(m.Content)
+	}
+
+	completionTokens = estimatetoken.EstimateTokens(sb.String())
+
+	fmt.Println("promptTokens:", promptTokens)
+	fmt.Println("completionTokens:", completionTokens)
 	return &entity.ChatResponse{
 		Content: sb.String(),
+		Usage: entity.Usage{
+			PromptTokens:     promptTokens,
+			CompletionTokens: completionTokens,
+			TotalTokens:      promptTokens + completionTokens,
+		},
 	}, nil
 }
 

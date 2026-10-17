@@ -7,6 +7,7 @@ import (
 
 	"github.com/ollama/ollama/api"
 	"github.com/yonesbeheshti/ai-gateway/entity"
+	"github.com/yonesbeheshti/ai-gateway/pkg/estimatetoken"
 )
 
 type Provider struct {
@@ -44,7 +45,17 @@ func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.C
 	}
 
 	var sb strings.Builder
+	var promptTokens, completionTokens int64
 	respFunc := func(resp api.ChatResponse) error {
+
+		if resp.PromptEvalCount > 0 {
+			promptTokens = int64(resp.PromptEvalCount)
+		}
+
+		if resp.EvalCount > 0 {
+			completionTokens = int64(resp.EvalCount)
+		}
+
 		sb.WriteString(resp.Message.Content)
 		return nil
 	}
@@ -55,7 +66,21 @@ func (p *Provider) Chat(ctx context.Context, req *entity.ChatRequest) (*entity.C
 		return nil, err
 	}
 
+	if promptTokens == 0 {
+		for _, m := range req.Messages {
+			promptTokens += estimatetoken.EstimateTokens(m.Content)
+		}
+	}
+	if completionTokens == 0 {
+		completionTokens = estimatetoken.EstimateTokens(sb.String())
+	}
+
 	return &entity.ChatResponse{
 		Content: sb.String(),
+		Usage: entity.Usage{
+			PromptTokens:     promptTokens,
+			CompletionTokens: completionTokens,
+			TotalTokens:      promptTokens + completionTokens,
+		},
 	}, nil
 }

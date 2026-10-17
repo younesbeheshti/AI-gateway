@@ -15,6 +15,7 @@ type Repository interface {
 	AddUser(ctx context.Context, user *entity.User) (*entity.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetUserByApiKey(ctx context.Context, apiKey string) (*entity.User, error)
+	DeductUserTokens(ctx context.Context, userID uint64, tokens int64) (int64, error)
 }
 
 type Service struct {
@@ -70,16 +71,27 @@ func (s *Service) Login(ctx context.Context, req *param.LoginRequest) (*param.Lo
 	}, nil
 }
 
-func (s *Service) GetUserByApiKey(ctx context.Context, apiKey string) (*entity.User, error) {
+func (s *Service) GetUserByApiKey(ctx context.Context, apiKey string) (*param.User, error) {
 	user, err := s.repo.GetUserByApiKey(ctx, apiKey)
 	if err != nil {
 		log.Println("err", err.Error())
 		return nil, err
 	}
 
-	return user, nil
+	userResp := &param.User{
+		ID:     user.ID,
+		Tokens: user.TokenBalance,
+	}
+
+	return userResp, nil
 }
 
+func (s *Service) DeductTokens(ctx context.Context, userID uint64, tokens int64) (int64, error) {
+	if tokens <= 0 {
+		return 0, nil
+	}
+	return s.repo.DeductUserTokens(ctx, userID, tokens)
+}
 
 func GenerateApiKey() (string, error) {
 	bytes := make([]byte, 24) // 24 bytes = 48 hex characters
